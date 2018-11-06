@@ -1,6 +1,6 @@
 import pandas
 from stats.models import Locomotive, Mileage, Subsidiary
-import os
+
 
 def load_data():
     result = True
@@ -9,8 +9,8 @@ def load_data():
         _, _, *years = data.columns.values
         for subsidiary_name, loco_seria, *mileage_by_years in data.values:
 
-            loco = Locomotive.objects.filter(series=loco_seria).first()
-            subsidiary = Subsidiary.objects.filter(name=subsidiary_name).first()
+            loco = Locomotive.objects.filter(series=loco_seria.replace(' ', '')).first()
+            subsidiary = Subsidiary.objects.filter(name=subsidiary_name.replace(' ', '')).first()
 
             if loco and subsidiary:
                 bind_loco_subsidiary(loco, subsidiary)
@@ -24,8 +24,8 @@ def load_data():
 
 
 def bind_loco_subsidiary(loco: Locomotive, subsidiary: Subsidiary):
-    find_loco = next((l for l in subsidiary.locomotives.values() if l.sereas == loco.series), None)
-    if find_loco:
+    find_loco = next((l for l in subsidiary.locomotives.all() if l.series == loco.series), None)
+    if not find_loco:
         subsidiary.locomotives.add(loco)
         subsidiary.save()
 

@@ -1,11 +1,74 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <script src="/static/chart.js"></script>
+    {% load static %}
+    <script src="/static/js/chart.js"></script>
+    <script src="/static/js/jquery-1.12.4.js"></script>
+    <script src="/static/js/bootstrap.js"></script>
+    <link rel="stylesheet" href="/static/css/bootstrap.css">
+    <link rel="stylesheet" href="/static/css/bootstrap-theme.css">
     <meta charset="UTF-8">
     <title>Отчёт по доходности</title>
 </head>
 <body>
+<div class="col-xs-12" style="margin-top: 50px;">
+  <div class="col-xs-8">
+      <div class="col-xs-5">
+          <div class="input-group">
+            <div class="input-group-btn">
+              <button class="btn btn-default dropdown-toggle" type="button" id="subsidiaryMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                Филиал
+                <span class="caret"></span>
+              </button>
+              <ul id="subsidiaryList" class="dropdown-menu" aria-labelledby="subsidiaryMenu">
+                <li><a href="#">Не выбран</a></li>
+              </ul>
+            </div>
+              <input type="text" class="form-control" aria-label="subsidiaryMenu">
+          </div>
+      </div>
+      <div class="col-xs-5">
+          <div class="input-group">
+            <div class="input-group-btn">
+              <button class="btn btn-default dropdown-toggle" type="button" id="locoMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                Серия Вагона
+                <span class="caret"></span>
+              </button>
+              <ul id="locoSeriesList" class="dropdown-menu" aria-labelledby="locoMenu">
+                <li><a href="#">Не выбран</a></li>
+              </ul>
+            </div>
+              <input type="text" class="form-control" aria-label="locoMenu">
+          </div>
+      </div>
+      <div class="col-xs-2">
+          <button type="button" class="btn btn-success">
+              <span class="glyphicon glyphicon-signal"></span> Построить
+          </button>
+      </div>
 
+      <div class="col-xs-12">
+          <canvas id="chartProfit" width="600" height="300"></canvas>
+      </div>
+  </div>
+</div>
+<script type="text/javascript">
+$.ajax({
+    url: 'http://127.0.0.1:8000/get_info',
+    contentType: 'application/json',
+    dataType:'jsonp',
+    responseType:'application/json',
+    xhrFields: {
+        withCredentials: false
+    },
+    headers: {
+    'Access-Control-Allow-Credentials' : true,
+    'Access-Control-Allow-Origin':'*',
+    'Access-Control-Allow-Methods':'GET',
+    'Access-Control-Allow-Headers':'application/json',
+    }
+})
+    .done((data) => {console.log(data);});
+</script>
 </body>
 </html>
