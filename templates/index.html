@@ -12,63 +12,191 @@
 </head>
 <body>
 <div class="col-xs-12" style="margin-top: 50px;">
-  <div class="col-xs-8">
-      <div class="col-xs-5">
-          <div class="input-group">
-            <div class="input-group-btn">
-              <button class="btn btn-default dropdown-toggle" type="button" id="subsidiaryMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                Филиал
-                <span class="caret"></span>
-              </button>
-              <ul id="subsidiaryList" class="dropdown-menu" aria-labelledby="subsidiaryMenu">
-                <li><a href="#">Не выбран</a></li>
-              </ul>
+    <div class="col-xs-8">
+        <div class="col-xs-12"><h1 class="text-warning"> Фильтрация</h1></div>
+        <div class="col-xs-5">
+            <div class="input-group">
+                <div class="input-group-btn">
+                    <button class="btn btn-default dropdown-toggle" type="button" id="subsidiaryMenu"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        Филиал
+                        <span class="caret"></span>
+                    </button>
+                    <ul id="subsidiaryList" class="dropdown-menu" aria-labelledby="subsidiaryMenu">
+                        <li value="">Не выбран</li>
+                    </ul>
+                </div>
+                <input id="subsidiaryView" type="text" class="form-control disabled" disabled="true"
+                       aria-label="subsidiaryMenu">
             </div>
-              <input type="text" class="form-control" aria-label="subsidiaryMenu">
-          </div>
-      </div>
-      <div class="col-xs-5">
-          <div class="input-group">
-            <div class="input-group-btn">
-              <button class="btn btn-default dropdown-toggle" type="button" id="locoMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                Серия Вагона
-                <span class="caret"></span>
-              </button>
-              <ul id="locoSeriesList" class="dropdown-menu" aria-labelledby="locoMenu">
-                <li><a href="#">Не выбран</a></li>
-              </ul>
+        </div>
+        <div class="col-xs-5">
+            <div class="input-group">
+                <div class="input-group-btn">
+                    <button class="btn btn-default dropdown-toggle" type="button" id="locoMenu" data-toggle="dropdown"
+                            aria-haspopup="true" aria-expanded="true">
+                        Серия Вагона
+                        <span class="caret"></span>
+                    </button>
+                    <ul id="locoList" class="dropdown-menu" aria-labelledby="locoMenu">
+                        <li value="">Не выбран</li>
+                    </ul>
+                </div>
+                <input id="locoView" type="text" class="form-control" disabled="true" aria-label="locoMenu">
             </div>
-              <input type="text" class="form-control" aria-label="locoMenu">
-          </div>
-      </div>
-      <div class="col-xs-2">
-          <button type="button" class="btn btn-success">
-              <span class="glyphicon glyphicon-signal"></span> Построить
-          </button>
-      </div>
-
-      <div class="col-xs-12">
-          <canvas id="chartProfit" width="600" height="300"></canvas>
-      </div>
-  </div>
+        </div>
+        <div class="col-xs-2">
+            <button onclick="getStats()" type="button" class="btn btn-success">
+                <span class="glyphicon glyphicon-signal"></span> Построить
+            </button>
+        </div>
+        <div class="col-xs-12" style="margin-top: 20px;"><h1 class="text-warning"> Отчётный период</h1></div>
+        <div class="col-xs-2">
+            <div class="input-group">
+                <div class="input-group-btn">
+                    <button class="btn btn-default dropdown-toggle" type="button" id="startYearMenu"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        От:
+                        <span class="caret"></span>
+                    </button>
+                    <ul id="startYearList" class="dropdown-menu" aria-labelledby="startYearMenu">
+                        <li value="">Не выбран</li>
+                    </ul>
+                </div>
+                <input id="startYear" type="text" class="form-control" disabled="true" aria-label="startYearMenu">
+            </div>
+        </div>
+        <div class="col-xs-2">
+            <div class="input-group">
+                <div class="input-group-btn">
+                    <button class="btn btn-default dropdown-toggle" type="button" id="endYearMenu"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        До:
+                        <span class="caret"></span>
+                    </button>
+                    <ul id="endYearList" class="dropdown-menu" aria-labelledby="endYearMenu">
+                        <li value="">Не выбран</li>
+                    </ul>
+                </div>
+                <input id="endYear" type="text" class="form-control" disabled="true" aria-label="endYearMenu">
+            </div>
+        </div>
+        <div class="col-xs-12">
+            <canvas id="chartProfit" width="600" height="300"></canvas>
+        </div>
+    </div>
 </div>
-<script type="text/javascript">
-$.ajax({
-    url: 'http://127.0.0.1:8000/get_info',
-    contentType: 'application/json',
-    dataType:'jsonp',
-    responseType:'application/json',
-    xhrFields: {
-        withCredentials: false
-    },
-    headers: {
-    'Access-Control-Allow-Credentials' : true,
-    'Access-Control-Allow-Origin':'*',
-    'Access-Control-Allow-Methods':'GET',
-    'Access-Control-Allow-Headers':'application/json',
+<style>
+    ul > li {
+        cursor: pointer;
     }
-})
-    .done((data) => {console.log(data);});
+</style>
+<script type="text/javascript">
+    let locomotives = {};
+    let subsidiaries = {};
+    let filters = {};
+
+    let chart = null;
+    let ctx = document.getElementById('chartProfit').getContext('2d');
+
+    function getStats() {
+        let requestStat = $.ajax({
+            url: 'http://127.0.0.1:8000/get_stats/',
+            data: filters,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+            }
+        });
+
+        requestStat.done(function (data) {
+            let dataset = {
+                label: 'profit by year',
+                data: data.stats
+            };
+
+            if (chart != null) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [dataset]
+                }
+            });
+        });
+    }
+
+    function selectLoco(locoId) {
+        if (locoId) {
+            filters['locomotive_id'] = locoId;
+            $("#locoView").val(locomotives[locoId].series);
+        } else {
+            delete filters['locomotive_id'];
+            $("#locoView").val('Для всех локомотивов');
+        }
+    }
+
+    function setLocoList(locoIds) {
+        selectLoco(null);
+        $("#locoList .source").remove();
+        if (typeof locoIds === "object" && locoIds.length > 0)
+            locoIds.forEach((locoId) => {
+                $("#locoList").append(`<li value="${locoId}" class="source">${locomotives[locoId].series}</li>`);
+            });
+
+        $("#locoList li").click(function () {
+            let a = $(this).attr("value");
+            selectLoco(a);
+        });
+    }
+
+    function selectSubsidiary(subId) {
+        if (subId) {
+            filters['subsidiary_id'] = subId;
+            delete filters['locomotive_id'];
+            $("#subsidiaryView").val(subsidiaries[subId].name);
+            setLocoList(subsidiaries[subId]['locomotives']);
+        } else {
+            filters = {};
+            $("#subsidiaryView").val('Для всех филиалов');
+            setLocoList(Object.keys(locomotives));
+        }
+    }
+
+
+    function setSunsidiary() {
+        Object.keys(subsidiaries).forEach((subId) => {
+            $("#subsidiaryList").append(
+                `<li value="${subId}" class="source">${subsidiaries[subId].name}</li>`
+            );
+        });
+        $("#subsidiaryList li").click(function () {
+            let a = $(this).attr("value");
+            selectSubsidiary(a);
+        });
+    }
+
+
+    function main() {
+        let request = $.ajax({
+            url: 'http://127.0.0.1:8000/get_info/',
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+            }
+        });
+        request.done(function (data) {
+            locomotives = data['loco'];
+            subsidiaries = data['subsidiary'];
+            // create default control value
+            setSunsidiary();
+            setLocoList(Object.keys(locomotives));
+        });
+    }
+
+    main();
+
 </script>
 </body>
 </html>

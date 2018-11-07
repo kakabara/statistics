@@ -15,12 +15,14 @@ def get_info(request: HttpRequest):
     all_subsidiaries = Subsidiary.objects.all()
 
     for loco in all_loco:
-        response['loco'][loco.id] = loco.series
+        response['loco'][loco.id] = {
+            'series': loco.series
+        }
 
     for sub in all_subsidiaries:
         response['subsidiary'][sub.id] = {
             'name': sub.name,
-            'locomotives': [l.series for l in sub.locomotives.all()]
+            'locomotives': [l.id for l in sub.locomotives.all()]
         }
 
     return JsonResponse(response)
@@ -37,11 +39,22 @@ def loader(request: HttpRequest):
 
 
 def stats(request: HttpRequest):
-    filters = request.POST.get('filters', {})
+    filters = dict(request.GET)
+    filters = {k: filters[k][0] for k in filters}
     mileages = None
-    mileages = Mileage.objects.filters(**filters).all()
+    mileages = Mileage.objects.filter(**filters).all()
     data = {
         'stats':
-            {}
+            []
     }
+    if len(mileages):
+        stats_by_year = {}
+        for mileage in mileages:
+            stats_by_year.setdefault(mileage.year, []).append(mileage.value * mileage.locomotive.rate_per_km)
+
+        for year in stats_by_year:
+            sum_by_year = stats_by_year[year]
+            stats_by_year[year] = sum(sum_by_year)
+        data['stats'] = [{'x': year, 'y': stats_by_year[year]} for year in stats_by_year]
+        data['labels'] = list(stats_by_year.keys())
     return JsonResponse(data)
