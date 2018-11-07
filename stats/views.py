@@ -3,16 +3,28 @@ from django.http import JsonResponse, HttpRequest
 
 from .models import Mileage, Subsidiary, Locomotive
 from stats.data import load_data
+from django.views.decorators.csrf import csrf_exempt
+
+import json
+
+
 # Create your views here.
 
 
 def get_info(request: HttpRequest):
-    response = {
-        'loco': {},
-        'subsidiary': {}
-    }
     all_loco = Locomotive.objects.all()
     all_subsidiaries = Subsidiary.objects.all()
+    all_mileage = Mileage.objects.all()
+    all_years = [m.year for m in all_mileage]
+    min_year = min(all_years)
+    max_year = max(all_years)
+
+    response = {
+        'loco': {},
+        'subsidiary': {},
+        'min_year': min_year,
+        'max_year': max_year
+    }
 
     for loco in all_loco:
         response['loco'][loco.id] = {
@@ -22,7 +34,7 @@ def get_info(request: HttpRequest):
     for sub in all_subsidiaries:
         response['subsidiary'][sub.id] = {
             'name': sub.name,
-            'locomotives': [l.id for l in sub.locomotives.all()]
+            'locomotives': [l.id for l in sub.locomotives.all()],
         }
 
     return JsonResponse(response)
@@ -38,11 +50,24 @@ def loader(request: HttpRequest):
     return JsonResponse(loading_result)
 
 
+@csrf_exempt
 def stats(request: HttpRequest):
-    filters = dict(request.GET)
-    filters = {k: filters[k][0] for k in filters}
-    mileages = None
-    mileages = Mileage.objects.filter(**filters).all()
+    body = json.loads(request.body.decode('utf-8'))
+    filters = list(body.get('filters', []))
+    time_range = body.get('time_range', {})
+    mileages_query = None
+    for f in filters:
+        if not mileages_query:
+            mileages_query = Mileage.objects.filter(**f)
+        else:
+            mileages_query = Mileage.objects.filter(**f) or mileages_query
+        mileages_query = mileages_query.filter(**time_range)
+
+    if mileages_query is None:
+        mileages = []
+    else:
+        mileages = mileages_query.all()
+
     data = {
         'stats':
             []

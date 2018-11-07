@@ -46,9 +46,12 @@
             </div>
         </div>
         <div class="col-xs-2">
-            <button onclick="getStats()" type="button" class="btn btn-success">
-                <span class="glyphicon glyphicon-signal"></span> Построить
+            <button onclick="addFilter()" type="button" class="btn btn-success">
+                <span class="glyphicon glyphicon-plus"></span> Добавить в отчёт
             </button>
+        </div>
+        <div class="col-xs-3">
+            <ul id="listsFilters" class="list-group"></ul>
         </div>
         <div class="col-xs-12" style="margin-top: 20px;"><h1 class="text-warning"> Отчётный период</h1></div>
         <div class="col-xs-2">
@@ -81,6 +84,11 @@
                 <input id="endYear" type="text" class="form-control" disabled="true" aria-label="endYearMenu">
             </div>
         </div>
+        <div class="col-xs-2">
+            <button onclick="getStats()" type="button" class="btn btn-success">
+                <span class="glyphicon glyphicon-signal"></span> Построить
+            </button>
+        </div>
         <div class="col-xs-12">
             <canvas id="chartProfit" width="600" height="300"></canvas>
         </div>
@@ -94,15 +102,20 @@
 <script type="text/javascript">
     let locomotives = {};
     let subsidiaries = {};
-    let filters = {};
+    let filters = [];
+    let filter = {};
+    let timeRange = {};
 
     let chart = null;
     let ctx = document.getElementById('chartProfit').getContext('2d');
 
     function getStats() {
+        let body = {filters: [...filters]};
+        body['time_range'] = {...timeRange};
         let requestStat = $.ajax({
             url: 'http://127.0.0.1:8000/get_stats/',
-            data: filters,
+            type: 'POST',
+            data: JSON.stringify(body),
             headers: {
                 'Access-Control-Allow-Origin': '*',
             }
@@ -128,12 +141,54 @@
         });
     }
 
+    function rebuildFilterList() {
+        $("#listsFilters li").remove();
+        filters.forEach((f) => {
+            let subName = subsidiaries[f['subsidiary_id']];
+            let locoName = locomotives[f['locomotive_id']];
+            subName = subName ? subName.name: null;
+            locoName = locoName ? locoName.series: null;
+            let view = '';
+            if (subName) view += subName;
+            if (locoName) view += view?` ${locoName}`:locoName;
+            let argRemove = JSON.stringify(f);
+            let filterView = `<li class="list-group-item">
+                <span onclick='removeFilter(${argRemove})' class="glyphicon glyphicon-remove"></span> ${view}
+                </li> `;
+            $("#listsFilters").append(filterView);
+        });
+    }
+
+    function removeFilter(filterJson) {
+        filters.splice(filters.findIndex((f) => { return JSON.stringify(f) === JSON.stringify(filterJson)}), 1);
+        rebuildFilterList();
+    }
+
+    function addFilter() {
+        let findedFilter = filters.find((f)=> { return JSON.stringify(f) === JSON.stringify(filter)});
+        if (!findedFilter) {
+            filters.push({...filter});
+            let subName = subsidiaries[filter['subsidiary_id']];
+            let locoName = locomotives[filter['locomotive_id']];
+            subName = subName ? subName.name: null;
+            locoName = locoName ? locoName.series: null;
+            let view = '';
+            if (subName) view += subName;
+            if (locoName) view += view?` ${locoName}`:locoName;
+            let argRemove = JSON.stringify(filter);
+            let filterView = `<li class="list-group-item">
+                <span onclick='removeFilter(${argRemove})' class="glyphicon glyphicon-remove"></span> ${view}
+                </li> `;
+            $("#listsFilters").append(filterView);
+        }
+    }
+
     function selectLoco(locoId) {
         if (locoId) {
-            filters['locomotive_id'] = locoId;
+            filter['locomotive_id'] = locoId;
             $("#locoView").val(locomotives[locoId].series);
         } else {
-            delete filters['locomotive_id'];
+            delete filter['locomotive_id'];
             $("#locoView").val('Для всех локомотивов');
         }
     }
@@ -154,19 +209,18 @@
 
     function selectSubsidiary(subId) {
         if (subId) {
-            filters['subsidiary_id'] = subId;
-            delete filters['locomotive_id'];
+            filter['subsidiary_id'] = subId;
             $("#subsidiaryView").val(subsidiaries[subId].name);
             setLocoList(subsidiaries[subId]['locomotives']);
         } else {
-            filters = {};
+            delete filter['subsidiary_id'];
             $("#subsidiaryView").val('Для всех филиалов');
             setLocoList(Object.keys(locomotives));
         }
     }
 
 
-    function setSunsidiary() {
+    function setSubsidiary() {
         Object.keys(subsidiaries).forEach((subId) => {
             $("#subsidiaryList").append(
                 `<li value="${subId}" class="source">${subsidiaries[subId].name}</li>`
@@ -176,6 +230,34 @@
             let a = $(this).attr("value");
             selectSubsidiary(a);
         });
+    }
+
+    function selectYear(type, year) {
+        if (type === 'start') {
+            timeRange['year__gte'] = year;
+            $("#startYear").val(year);
+        } else {
+            timeRange['year__lte'] = year;
+            $("#endYear").val(year);
+        }
+    }
+
+    function setYears(minYear, maxYear) {
+        if (minYear && maxYear) {
+            for (let i = minYear; i <= maxYear; i++) {
+                $("#endYearList").append(`<li value=${i}>${i}</li>`);
+                $("#startYearList").append(`<li value=${i}>${i}</li>`);
+            }
+            $("#endYearList li").click(function () {
+                let a = $(this).attr("value");
+                selectYear('end', a);
+            });
+            $("#startYearList li").click(function () {
+                let a = $(this).attr("value");
+                selectYear('start', a);
+            });
+        }
+
     }
 
 
@@ -190,8 +272,9 @@
             locomotives = data['loco'];
             subsidiaries = data['subsidiary'];
             // create default control value
-            setSunsidiary();
+            setSubsidiary();
             setLocoList(Object.keys(locomotives));
+            setYears(data['min_year'], data['max_year']);
         });
     }
 
