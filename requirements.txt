@@ -4,3 +4,4 @@ pandas==0.20.3
 python-dateutil==2.7.5
 pytz==2018.7
 six==1.11.0
+gunicorn==19.6.0
