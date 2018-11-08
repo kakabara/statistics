@@ -113,7 +113,7 @@
         let body = {filters: [...filters]};
         body['time_range'] = {...timeRange};
         let requestStat = $.ajax({
-            url: 'http://127.0.0.1:8000/get_stats/',
+            url: 'http://{{ host }}/get_stats/',
             type: 'POST',
             data: JSON.stringify(body),
             headers: {
@@ -234,10 +234,18 @@
 
     function selectYear(type, year) {
         if (type === 'start') {
-            timeRange['year__gte'] = year;
+            if (!year) {
+                delete timeRange['year__gte'];
+            } else {
+                timeRange['year__gte'] = year;
+            }
             $("#startYear").val(year);
         } else {
-            timeRange['year__lte'] = year;
+            if (!year) {
+                delete timeRange['year__lte'];
+            } else {
+                timeRange['year__lte'] = year;
+            }
             $("#endYear").val(year);
         }
     }
@@ -263,7 +271,7 @@
 
     function main() {
         let request = $.ajax({
-            url: 'http://127.0.0.1:8000/get_info/',
+            url: 'http://{{ host }}/get_info/',
             headers: {
                 'Access-Control-Allow-Origin': '*',
             }

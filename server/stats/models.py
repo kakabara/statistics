@@ -1,7 +1,5 @@
 from django.db import models
 from django.core.validators import MinValueValidator
-from datetime import date
-# Create your models here.
 
 
 class Locomotive(models.Model):

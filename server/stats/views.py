@@ -1,11 +1,11 @@
+import json
 from django.shortcuts import render
 from django.http import JsonResponse, HttpRequest
-
-from .models import Mileage, Subsidiary, Locomotive
-from stats.data import load_data
 from django.views.decorators.csrf import csrf_exempt
 
-import json
+from .env import host
+from stats.data import load_data
+from .models import Mileage, Subsidiary, Locomotive
 
 
 # Create your views here.
@@ -41,7 +41,7 @@ def get_info(request: HttpRequest):
 
 
 def index(request: HttpRequest):
-    return render(request, '../templates/index.html')
+    return render(request, '../templates/index.html', {'host': host})
 
 
 def loader(request: HttpRequest):
