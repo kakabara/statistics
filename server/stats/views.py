@@ -12,6 +12,11 @@ from .models import Mileage, Subsidiary, Locomotive
 
 
 def get_info(request: HttpRequest):
+    """
+    Метод для инициализация приложения на front-е
+    :param request:
+    :return:
+    """
     all_loco = Locomotive.objects.all()
     all_subsidiaries = Subsidiary.objects.all()
     all_mileage = Mileage.objects.all()
@@ -45,6 +50,9 @@ def index(request: HttpRequest):
 
 
 def loader(request: HttpRequest):
+    """
+    Метод для загрузки данныз с csv
+    """
     result = load_data()
     loading_result = {'result': result}
     return JsonResponse(loading_result)
@@ -52,21 +60,27 @@ def loader(request: HttpRequest):
 
 @csrf_exempt
 def stats(request: HttpRequest):
+    """
+    Метод получения статистики по фильтрам
+
+    :param request:
+    :return:
+    """
     body = json.loads(request.body.decode('utf-8'))
     filters = list(body.get('filters', []))
     time_range = body.get('time_range', {})
     mileages_query = None
+    # append filter by OR expression
     for f in filters:
         if not mileages_query:
             mileages_query = Mileage.objects.filter(**f)
         else:
             mileages_query = Mileage.objects.filter(**f) or mileages_query
         mileages_query = mileages_query.filter(**time_range)
-
-    if mileages_query is None:
-        mileages = []
     else:
-        mileages = mileages_query.all()
+        mileages_query = Mileage.objects.filter(**time_range)
+
+    mileages = mileages_query.all()
 
     data = {
         'stats':
